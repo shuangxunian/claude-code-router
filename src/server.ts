@@ -15,11 +15,12 @@ export const createServer = (config: any): Server => {
       }
 
       const response = await openai.chat.completions.create({
-        model: "gpt-4-vision-preview",
+        model: "gpt-4o",
         messages: [
           {
             role: "user",
             content: [
+              { "type": "text", "text": "请描述这张图中的主要内容。" },
               {
                 type: "image_url",
                 image_url: {
