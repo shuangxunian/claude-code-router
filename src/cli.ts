@@ -27,6 +27,23 @@ Example:
   ccr code "Write a Hello World"
 `;
 
+// 如果 stdin 不是 tty，就尝试读取二进制图片 —— 
+async function tryReadImageFromStdin(): Promise<{ imageData: any; mimeType: string } | null> {
+  if (process.stdin.isTTY) return null;
+  const chunks: Buffer[] = [];
+  for await (const chunk of process.stdin) {
+    chunks.push(chunk as Buffer);
+  }
+  const buf = Buffer.concat(chunks);
+  // 简单识别 PNG / JPEG
+  const hdr = buf.slice(0, 4).toString('hex');
+  let mimeType: string;
+  if (hdr.startsWith('89504e47')) mimeType = 'image/png';
+  else if (hdr.startsWith('ffd8ffe0') || hdr.startsWith('ffd8ffe1')) mimeType = 'image/jpeg';
+  else return null;
+  return { imageData: buf.toString('base64'), mimeType };
+}
+
 async function waitForService(
   timeout = 10000,
   initialDelay = 1000
@@ -47,6 +64,12 @@ async function waitForService(
 }
 
 async function main() {
+  // —— 图片管道/粘贴 优先 —— 
+  const pic = await tryReadImageFromStdin();
+  if (pic) {
+    await executeCodeCommand({ imageData: pic.imageData, mimeType: pic.mimeType });
+    return;
+  }
   switch (command) {
     case "start":
       run();
